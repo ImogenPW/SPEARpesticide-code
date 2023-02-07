@@ -1,0 +1,1561 @@
+---
+title: "SPEAR Pesticide Paper Oct22"
+author: "Imogen Poyntz-Wright and Xav Harrison"
+date: "2022-10-29" 
+output: 
+  html_document:
+    toc: true
+    number_sections: true
+    theme: united
+    
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Libraries
+
+```{r}
+library(tidybayes)
+library(cowplot)
+library(tidyverse)
+library(lme4)
+library(lattice)
+library(DHARMa)
+library(arm)
+library(MuMIn)
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(lattice)
+library(MuMIn)
+
+```
+
+
+
+# Part 1: Pesticide and Insecticide Use per region
+### Data
+```{r}
+#load datasets
+            pesticideusearea <- read_csv("C:/Users/imoge/OneDrive/phd/Pesticide region application PUSS_Yearly use per region/pesticde usage corrected even 1.csv")
+            insecticideusearea <- read_csv("C:/Users/imoge/OneDrive/phd/Pesticide region application PUSS_Yearly use per region/insecticide pesticide usage data2.csv")
+            
+          #read pesticide data
+            head(pesticideusearea)
+```
+
+### Plot
+```{r}
+#pesticide quantity use (change y to 'Total_area_treated_ha' to find area treated)
+            #2
+           # pestweight<- ggplot(pesticideusearea, aes(x=year, y=total_weight_applied_kg, color=region)) +
+            #  geom_point() +
+             # geom_line() +
+            #  theme_classic() +
+             # ylab("Predicted Total Pecticide Usage (kg)") +
+            #  xlab("Year") +
+             # theme(text = element_text(size = 15)) + theme(legend.position = "none")
+            #pestweight
+            
+             pestweight<- ggplot(pesticideusearea, aes(x=year, y=total_weight_applied_kg, fill=region)) +
+              geom_bar(position="stack", stat="identity") +
+              theme_classic() +
+              ylab("Predicted Total Pecticide Usage (kg)") +
+              xlab("Year") +
+              theme(text = element_text(size = 18)) + theme(legend.position = "none") +
+              theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+            pestweight
+            ggsave('Pesticide_weight_time.png',pestweight,width=5,height=5)   
+            
+            #2
+           # pestha<- ggplot(pesticideusearea, aes(x=year, y=Total_area_treated_ha, color=region)) +
+            #  geom_point() +
+             # geom_line() +
+              #theme_classic() +
+              #ylab("Total Area Pesticides Applied (ha)") +
+              #xlab("Year") +
+              #theme(text = element_text(size = 15)) + theme(legend.position = "none")
+            #pestha
+            
+          pestha<- ggplot(pesticideusearea, aes(x=year, y=Total_area_treated_ha, fill=region)) +
+            geom_bar(position="stack", stat="identity") +
+            theme_classic() +
+            ylab("Total Area Pesticides Applied (ha)") +
+            xlab("Year") +
+            theme(text = element_text(size = 20)) + theme(legend.position = "none")+
+          theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+            pestha
+            ggsave('Pesticide_hectare_time.png',pestha,width=5,height=5)  
+            
+            #read insecticide data
+            head(insecticideusearea)
+            
+    ##insecticide quantity use (change y to 'Total_area_treated_ha' to find area treated)
+            #1
+           insectweight<- ggplot(insecticideusearea, aes(x=year, y=kg, fill=Region)) +
+            geom_bar(position="stack", stat="identity") +
+            theme_classic() +
+            ylab("Predicted Total Insecticide Usage (kg)") +
+            xlab("Year") +
+            theme(text = element_text(size = 18)) + theme(legend.position = "none") +
+            theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+           insectweight
+            ggsave('Insecticide_weight_time.png',insectweight,width=5,height=5) 
+            #2
+            insectha<- ggplot(insecticideusearea, aes(x=year, y=aiarea, fill=Region)) +
+              geom_bar(position="stack", stat="identity") +
+              theme_classic() +
+              ylab("Total Area Insecticide Applied (ha)") +
+              xlab("Year") +
+              theme(text = element_text(size = 20)) + theme(legend.position = "none")+
+              theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+            insectha
+
+            ggsave('Insecticide_hectare_time.png',insectha,width=5,height=5)  
+            
+```
+
+# PART 2: SPEARpesticide variation across site and regions
+
+## Data
+```{r}
+#Importing datasets
+
+anglian <-read.csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/SPEAR whole year data/anglian spear missing spp included rivers width.csv")
+midlands <-read.csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/SPEAR whole year data/midlands spear missing spp included rivers width.csv")
+northeast<-read.csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/SPEAR whole year data/north east spear missing spp included rivers width.csv")
+northwest<-read.csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/SPEAR whole year data/north west spear missing spp included rivers width.csv")
+southeast <-read.csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/SPEAR whole year data/south east spear missing spp included rivers width.csv")
+southwest<-read.csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/SPEAR whole year data/south west spear missing spp included rivers width.csv")
+thames<-read.csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/SPEAR whole year data/thames spear missing spp included rivers width.csv")
+
+
+### Combine Data Frames
+  anglian$region<-"Anglian"
+  midlands$region<-"Midlands"
+  northeast$region<-"Northeast"
+  northwest$region<-"NorthWest"
+  southeast$region<-"SouthEast"
+  southwest$region<-"Southwest"
+  thames$region<-"Thames"
+  
+  #Can these be combined? 'TRUE' means yes
+    all.equal(colnames(anglian),colnames(midlands),colnames(northeast),colnames(northwest),colnames(southeast),colnames(southwest),colnames(thames))
+  
+  #Combine 
+    regionframe<-rbind(anglian,midlands,northeast,northwest,southeast,southwest,thames)
+    nrow(regionframe)
+    head(regionframe)
+    hist(regionframe$SPEARpesticide)
+```
+## Processing data
+
+```{r}
+#FINDING THE MEANS PER SITE and adding site id data with long/lat data
+#ANGLIAN
+#overall mean of samples for each site per year
+meananglianyear <- anglian %>% group_by(site_id, Year) %>% summarise_at(vars(SPEARpesticide), list(SPEARpesticide = mean))
+#MIDLANDS
+#overall mean of samples for each site per year
+meanmidlandsyear <- midlands %>% group_by(site_id, Year) %>% summarise_at(vars(SPEARpesticide), list(SPEARpesticide = mean))
+#NORTH EAST
+#overall mean of samples for each site per year
+meannortheastyear <- northeast %>% group_by(site_id, Year) %>% summarise_at(vars(SPEARpesticide), list(SPEARpesticide = mean))
+#NORTH WEST
+#overall mean of samples for each site per year
+meannorthwestyear <- northwest%>% group_by(site_id, Year) %>%summarise_at(vars(SPEARpesticide), list(SPEARpesticide = mean))
+#SOUTH EAST
+#overall mean of samples for each site per year
+meansoutheastyear <- southeast %>% group_by(site_id, Year) %>%summarise_at(vars(SPEARpesticide), list(SPEARpesticide = mean))
+#SOUTH WEST
+#overall mean of samples for each site per year
+meansouthwestyear <- southwest %>%group_by(site_id, Year) %>%summarise_at(vars(SPEARpesticide), list(SPEARpesticide = mean))
+#THAMES
+#overall mean of samples for each site per year
+meanthamesyear <- thames %>%group_by(site_id, Year) %>%summarise_at(vars(SPEARpesticide), list(SPEARpesticide = mean))
+
+#adding region column
+meananglian2year <- meananglianyear
+meananglian2year$region <- "Anglian"
+meanmidlands2year <- meanmidlandsyear
+meanmidlands2year$region <- "Midlands"
+meannortheast2year <- meannortheastyear
+meannortheast2year$region <- "North East"
+meannorthwest2year <- meannorthwestyear
+meannorthwest2year$region <- "North West"
+meansoutheast2year <- meansoutheastyear
+meansoutheast2year$region <- "South East"
+meansouthwest2year <- meansouthwestyear
+meansouthwest2year$region <- "South West"
+meanthames2year <- meanthamesyear
+meanthames2year$region <- "Thames"
+
+
+#Combinding dataframes via rows
+forscatteryear <- rbind(meananglian2year, meanmidlands2year, meansoutheast2year, meansouthwest2year, meannorthwest2year, meannortheast2year, meanthames2year)
+head(forscatteryear)
+
+
+
+```
+
+
+## Regional comparison of SPEAR - boxplot
+
+```{r}
+#Making Boxplot
+p<-ggplot(forscatteryear, aes(x=region, y=SPEARpesticide)) + 
+  geom_boxplot(notch=TRUE) +
+  geom_boxplot(fill='#A4A4A4', color="black")+
+  theme_classic() +
+  labs(x="Region", y = "Mean SPEARpesticide index score (site/year)")
+p + theme(axis.title.x = element_text(vjust= - 1, size = 12, face = "bold"),
+          axis.title.y = element_text(vjust= 3, size = 12, face = "bold")) + scale_x_discrete(labels=c("anglian" = "Anglian", "midlands" = "Midlands", "northeast" = "North East", "northwest" = "North West", "southeast" = "South East", "southwest" = "South West", "thames" = "Thames"))
+
+#statistical analysis
+pairwise.t.test(x = forscatteryear$SPEARpesticide,g = forscatteryear$region,p.adjust.method = "bonf")
+```
+
+
+
+## Modelling
+For this model, we fit everything as a random effect, because it allows us to model variation among sites within regions, versus variation among regions
+
+
+```{r}
+    
+    
+###### Modelling Region Means Whilst Controlling for Year And Month
+
+    #FINDING THE MEANS PER SITE and adding site id data with long/lat data
+        m1<-lmer(SPEARpesticide ~ factor(Year) + factor(Month) + (1|region/site_id),data=regionframe)
+
+        summary(m1)
+      #Random Effect Plots  
+        dotplot(ranef(m1,condVar=T,whichel='site_id:region'))
+        dotplot(ranef(m1,condVar=T,whichel='region'))
+        
+    #Marginal Random Effects 
+        coef(m1)
+        
+  ###### Everything Random
+        m2<-lmer(SPEARpesticide ~ 1 + (1|region/site_id) + (1|Year),data=regionframe)
+        summary(m2)
+      
+      #Random Effect Plots  
+        dotplot(ranef(m2,condVar=T,whichel='site_id:region'))
+        dotplot(ranef(m2,condVar=T,whichel='region'))
+```
+
+
+## Model Checking
+
+```{r}
+      ##Model Checking 
+        simulationOutput <- simulateResiduals(fittedModel = m2)
+        plot(simulationOutput)
+```
+```
+### Posterior Simulation from the Model
+### Simulate uncertainty in the estimates of the random effects for plotting
+```{r}
+############## SIMULATE FROM MODEL 
+    
+      m2_sim<-sim(m2,1000) # parametric simulations from model given parameter estimates
+```
+
+ 
+
+### Year Effects
+```{r}
+      
+  ##### PLOT 1: MARGINAL YEAR EFFECTS
+      year_plotdata<-m2_sim@fixef[,1] + m2_sim@ranef$Year[,,1]
+      
+    #Reshape for Plotting   
+      year_plotdata %>% as.data.frame() %>% pivot_longer(colnames(.),names_to = "Year",values_to = "SPEAR") -> year_plotdata_long
+
+    ##Plot of Site Effects
+      year_plot1<-  year_plotdata_long %>% ggplot(aes(y=Year,x=SPEAR)) + geom_vline(xintercept = 0, linetype = "dashed") + stat_halfeye(shape=21,point_fill="white",point_size=5,colour="black",slab_alpha=0.5) + theme_bw() + theme(text = element_text(size=20)) + theme(axis.text.x = element_text(angle = 90, vjust = 0.2))
+      year_plot2<- year_plot1 + labs(x="Marginal SPEARpesticide Mean",y="Year") + coord_flip()
+      year_plot2
+      ggsave2('SPEAR by Year.png',year_plot2,width=15)
+      
+```
+
+### Region Effects
+
+```{r}
+  ##### PLOT 2: MARGINAL REGION EFFECTS
+      region_plotdata<-m2_sim@fixef[,1] + m2_sim@ranef$region[,,1]
+      
+    #Reshape for Plotting   
+      region_plotdata %>% as.data.frame() %>% pivot_longer(colnames(.),names_to = "Region",values_to = "SPEAR") -> region_plotdata_long
+      
+    ##Plot of Site Effects
+      region_plot1<-  region_plotdata_long %>% ggplot(aes(y=Region,x=SPEAR)) + geom_vline(xintercept = 0, linetype = "dashed") +  stat_halfeye(shape=21,point_fill="white",point_size=5,colour="black",slab_alpha=0.5) + theme_bw()
+      region_plot2<- region_plot1 + labs(x="Marginal SPEARpesticide Mean",y="Region") + theme(text = element_text(size=20))
+      region_plot2 
+      ggsave2('Spear by Region.png',region_plot2)
+      
+```
+
+### SITE ID Variation
+
+```{r}
+  ########## PLOT 3: Site ID VARIATION  
+      site_plotdata<- m2_sim@fixef[,1] + m2_sim@ranef$`site_id:region`[,,1]
+        dim(site_plotdata)
+        
+    #Which Sites Have the Largest and Smallest Effects / Adjustments    
+      site_means<-apply(site_plotdata,2,mean)  
+        min(site_means)
+      sitemean_data<-data.frame(mean=site_means,site_region=names(site_means))
+      sitemean_data %>% arrange(.,site_means) -> sitemean_data_sorted
+
+```
+
+
+
+
+
+
+```{r}
+ 
+    spear_data<-function(SPEARfile,regionlabel){
+      
+      #Aggregate Spear Data  
+      site_spearmayamean <- with(SPEARfile,aggregate(SPEARpesticide, by = list(site_id,Year), FUN = mean))
+      site_spearmayameannamed<- site_spearmayamean %>% rename( site_id = Group.1, Year = Group.2, meanspear = x)
+      head(site_spearmayameannamed)
+      return(site_spearmayameannamed)
+    }
+    
+    #SPEAR OVER TIME - ALL MONTHS
+    
+     #RUN FUNCTION
+    anglia_df1<-spear_data(anglian,"Anglian")
+    anglia_df1$Region <- 'Anglian'
+    midlands_df1<-spear_data(midlands,"Midlands")
+    midlands_df1$Region <- 'Midlands'
+    northeast_df1<-spear_data(northeast,"Northeast")
+    northeast_df1$Region <- 'Northeast'
+    northwest_df1<-spear_data(northwest,"Northwest")
+    northwest_df1$Region <- 'Northwest'
+    southeast_df1<-spear_data(southeast,"Southeast")
+    southeast_df1$Region <- 'Southeast'
+    southwest_df1<-spear_data(southwest,"Southwest")
+    southwest_df1$Region <- 'Southwest'
+    thames_df1<-spear_data(thames,"Thames")
+    thames_df1$Region <- 'Thames'
+    
+    #MERGE DATA
+    alldataallyear <- rbind(anglia_df1, midlands_df1, northeast_df1, northwest_df1, southeast_df1, southwest_df1, thames_df1)
+    head(alldatamay)
+    
+    #PLOT 
+    
+    spear_df_year<- alldataallyear %>%group_by (site_id,Region,Year) %>% summarise_at(vars("meanspear"), mean,na.rm=T) %>% 
+      group_by (Region,Year) %>% summarise_at(vars("meanspear"), mean,na.rm=T)
+    nrow(spear_df_may)
+    head(spear_df_may)
+    spearallyear<- ggplot(spear_df_year, aes(x=Year, y=meanspear  , color = Region)) +
+      geom_point() +
+      #geom_smooth() +
+      theme_bw() +
+      #facet_wrap(~Region, ncol= 1) +
+      ylab("Mean SPEARpesticide score") +
+      xlab("Year") + theme(axis.text.x = element_text(vjust = 0.2, size = 20), axis.text.y = element_text(size= 20), strip.text=element_text(size=20), axis.title = element_text(size = 25)) 
+    spearallyear
+    ggsave('spearallyear_new.png', spearallyear, width = 8, height = 16) 
+    
+    #SPEAR OVER TIME - May to July
+    #Load data
+    anglianspearmay <- read_csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/SPEAR May - July data/anglian spear may rivers only.csv") 
+    midlandsspearmay <- read_csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/SPEAR May - July data/midlands spear may rivers only.csv") 
+    northeastspearmay <- read_csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/SPEAR May - July data/north east spear may rivers only.csv") 
+    northwestspearmay <- read_csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/SPEAR May - July data/north west spear may rivers only.csv") 
+    southeastspearmay <- read_csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/SPEAR May - July data/south east spear may rivers only.csv") 
+    southwestspearmay <- read_csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/SPEAR May - July data/south west spear may rivers only.csv") 
+    thamesspearmay <- read_csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/SPEAR May - July data/thames spear may rivers only.csv") 
+    
+    #RUN FUNCTION
+    anglia_df<-spear_data(anglianspearmay,"Anglian")
+    anglia_df$Region <- 'Anglian'
+    midlands_df<-spear_data(midlandsspearmay,"Midlands")
+    midlands_df$Region <- 'Midlands'
+    northeast_df<-spear_data(northeastspearmay,"Northeast")
+    northeast_df$Region <- 'Northeast'
+    northwest_df<-spear_data(northwestspearmay,"Northwest")
+    northwest_df$Region <- 'Northwest'
+    southeast_df<-spear_data(southeastspearmay,"Southeast")
+    southeast_df$Region <- 'Southeast'
+    southwest_df<-spear_data(southwestspearmay,"Southwest")
+    southwest_df$Region <- 'Southwest'
+    thames_df<-spear_data(thamesspearmay,"Thames")
+    thames_df$Region <- 'Thames'
+    
+    #MERGE DATA
+    alldatamay <- rbind(anglia_df, midlands_df, northeast_df, northwest_df, southeast_df, southwest_df, thames_df)
+    head(alldatamay)
+    
+    #PLOT 
+    
+    spear_df_may<- alldatamay %>%group_by (site_id,Region,Year) %>% summarise_at(vars("meanspear"), mean,na.rm=T) %>% 
+      group_by (Region,Year) %>% summarise_at(vars("meanspear"), mean,na.rm=T)
+    nrow(spear_df_may)
+    head(spear_df_may)
+spearmay<- ggplot(spear_df_may, aes(x=Year, y=meanspear  , color = Region)) +
+  geom_point() +
+  #geom_smooth() +
+  theme_bw() +
+  facet_wrap(~Region, ncol=1) +
+  ylab("Mean SPEARpesticide score") +
+  xlab("Year") + theme(axis.text.x = element_text(vjust = 0.2, size = 20), axis.text.y = element_text(size= 20), strip.text=element_text(size=20), axis.title = element_text(size = 25)) 
+spearmay
+    ggsave('spearmay_new.png',spearmay, width = 8, height = 16) 
+```
+    
+##Model - difference in spear over times    
+```{r}
+     #whole year
+        allyear1<-lmer(meanspear ~ Year*Region + (1|Region), data=spear_df_year)
+        summary(allyear1)
+      #Random Effect Plots  
+        dotplot(ranef(allyear1,condVar=T,whichel='(Year|Region)'))
+      
+     #May-july
+      may1<-lmer(meanspear ~ Year*Region + (1|Region), data=spear_df_may)
+        summary(may1)
+      #Random Effect Plots  
+        dotplot(ranef(may1,condVar=T,whichel='(Year|Region)'))
+        
+        
+```
+##Model selection
+
+```{r}
+
+    #all year
+      allyear1_ML<-update(allyear1,REML=F) 
+      options(na.action="na.fail") # dredge function will break if different models contain different data / rows of data
+
+      allyear1_dredge<- dredge(allyear1_ML,subset=msubset) 
+      allyear1_dredge
+      write.table(allyear1_dredge, file = "AICc SPEAR over years whole year.txt", sep = ",")
+      (confset.d4 <- get.models(allyear1_dredge, subset = delta < 5))
+            get.models(allyear1_dredge, subset = 1)[[1]]
+            # meanspear ~ Region + Year + (1 | Region) + Region:Year
+      #best
+          best_allyear<-lmer(meanspear ~ Region + Year + (1 | Region) + Region*Year, data=spear_df_year)
+          best_allyear
+          
+    #may-july 
+    
+     may1_ML<-update(may1,REML=F) 
+      options(na.action="na.fail") # dredge function will break if different models contain different data / rows of data
+
+      may1_dredge<- dredge(may1_ML,subset=msubset) 
+      may1_dredge
+      write.table(may1_dredge, file = "AICc SPEAR over years may july.txt", sep = ",")
+          (confset.d4 <- get.models(may1_dredge, subset = delta < 5))
+            get.models(may1_dredge, subset = 1)[[1]]
+            # meanspear ~ Region + Year + (1 | Region) + Region:Year
+            
+        #best
+          best_may1<-lmer(meanspear ~ Region + Year + (1 | Region) + Region*Year, data=spear_df_may)
+          best_may1
+```
+
+## Model Checking``
+```{r}
+
+      ##Model Checking 
+       
+        simulationOutput1 <- simulateResiduals(best_allyear, refit=T, n=99)
+        testDispersion(simulationOutput1) #dispersion <1
+        qqnorm(resid(best_allyear))
+        hist(resid(best_allyear))
+        plot(fitted(best_allyear),resid(best_allyear))
+      
+        simulationOutput2 <- simulateResiduals(best_may1, refit=T, n=99)
+        testOverdispersion(simulationOutput2)
+        testDispersion(simulationOutput2) #dispersion <1
+         qqnorm(resid(best_may1))
+        hist(resid(best_may1))
+        plot(fitted(best_may1),resid(best_may1))
+```
+
+# PART 3: Pesticide/insecticide use and water quality influence on regional SPEARpesticide
+
+
+## Water quality: BOD vs SPEAR
+```{r}
+## SECTION 1: BOD and SPEAR
+
+### Data 
+      
+
+### FUNCTION TO HANDLE SPEAR AND BOD DATA PER REGION TO CALCULATE AND MERGE SITE/YEAR MEANS
+
+    spear_data_prep<-function(SPEARfile,BODfile,regionlabel){
+      
+    #Aggregate Spear Data  
+      site_spearmayamean <- with(SPEARfile,aggregate(SPEARpesticide, by = list(site_id,Year), FUN = mean))
+      site_spearmayameannamed<- site_spearmayamean %>% rename( site_id = Group.1, Year = Group.2, meanspear = x)
+      head(site_spearmayameannamed)
+      ggplot(allregionsbodbysiteobs, aes(x=Year, y=count_site   , color=Region)) +
+  geom_point() +
+  #geom_line(se=FALSE) +
+  theme_classic() +
+  ylab("Number of sample sites") +
+  xlab("Years")
+      
+    #Aggregate BOD Data  
+      BODraws <- na.omit(BODfile) 
+      site_BODmean <- with(BODraws,aggregate(Mean_LOQ1, by = list(SITE_ID, SAMPLE_YEAR), FUN = mean))
+      site_BODmeannamed<- site_BODmean %>% rename( site_id = Group.1, Year = Group.2, meanBOD = x)
+    
+    #MERGE SPEAR AND BOD
+      site_spearbod_merge <- site_BODmeannamed %>% right_join(site_spearmayameannamed, by=c("site_id", "Year"))
+      site_spearbod_merge_rename<- site_spearbod_merge %>% rename( site_id = site_id , Year = Year , sitebod = meanBOD, sitespear =meanspear)
+      
+    ##Tack on Sitelabel 
+      site_spearbod_merge_rename<- mutate(site_spearbod_merge_rename,region=regionlabel)
+      return(site_spearbod_merge_rename)
+    }
+
+########## RUNNING FUNCTION
+    
+  ## ANGLIA
+    anglianspearmay <- read_csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/SPEAR May - July data/anglian spear may rivers only.csv") 
+     
+    anglianBODraw <- read_csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/BOD/Anglian BOD.csv")
+    anglia_df<-spear_data_prep(anglianspearmay,anglianBODraw,"Anglian")
+    
+  ## MIDLANDS
+    midlandsspearmay <- read_csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/SPEAR May - July data/midlands spear may rivers only.csv") 
+    midlandsBODraw <- read_csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/BOD/Midlands BOD.csv")
+    midlands_df<-spear_data_prep(midlandsspearmay,midlandsBODraw,"Midlands")
+    
+  ## NORTHEAST
+    northeastspearmay <- read_csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/SPEAR May - July data/north east spear may rivers only.csv") 
+    northeastBODraw <- read_csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/BOD/North east BOD.csv")
+    northeast_df<-spear_data_prep(northeastspearmay,northeastBODraw,"NorthEast")
+    
+  ## NORTHWEST
+    northwestspearmay <- read_csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/SPEAR May - July data/north west spear may rivers only.csv") 
+    northwestBODraw <- read_csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/BOD/North west BOD.csv")
+    northwest_df<-spear_data_prep(northwestspearmay,northwestBODraw,"NorthWest")
+    
+  ## SOUTHEAST
+    southeastspearmay <- read_csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/SPEAR May - July data/south east spear may rivers only.csv") 
+    southeastBODraw <- read_csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/BOD/South east BOD.csv")
+    southeast_df<-spear_data_prep(southeastspearmay,southeastBODraw,"SouthEast")
+
+  ## SOUTHWEST
+    southwestspearmay <- read_csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/SPEAR May - July data/south west spear may rivers only.csv") 
+    southwestBODraw <- read_csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/BOD/South west BOD.csv")
+    southwest_df<-spear_data_prep(southwestspearmay,southwestBODraw,"SouthWest")
+    
+  ## THAMES
+    thamesspearmay <- read_csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/SPEAR May - July data/thames spear may rivers only.csv") 
+    thamesBODraw <- read_csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/BOD/Thames BOD.csv")
+    thames_df<-spear_data_prep(thamesspearmay,thamesBODraw,"Thames")
+    
+    
+######## COMBINE
+    spear_df<-rbind(anglia_df,midlands_df,northwest_df,northeast_df,southeast_df,southwest_df,thames_df)
+
+
+```
+
+
+### Summary Stats and **Average by SITE, REGION, YEAR**
+Please double check this averaging is correct and you're happy. 
+
+```{r}
+
+  #Summary Stats   
+    nrow(spear_df) #14976
+    spear_df %>% group_by(region) %>% summarise(n=n(),n_site=length(unique(site_id)),n_year=length(unique(Year)))
+
+  #Proportion of Missing Values?
+    apply(spear_df,2,function(x)mean(is.na(x)))
+    
+  ##Remove NAs
+    spear_df_clean<-na.omit(spear_df)
+    
+  ## Replicate Site Level Datafrmae 
+    spear_df_yearmean<- spear_df %>%group_by (site_id,region,Year) %>% summarise_at(vars("sitebod", "sitespear"), mean,na.rm=T) %>% 
+        group_by (region,Year) %>% summarise_at(vars("sitebod", "sitespear"), mean,na.rm=T)
+    nrow(spear_df_yearmean)
+    head(spear_df_yearmean)
+
+```
+
+### Plots
+
+```{r}
+########## PLOTS
+    
+  #Raw Data  
+    p1<- ggplot(spear_df,aes(y=sitespear,x=sitebod)) + geom_point(shape=21,size=5,aes(fill=region)) + facet_wrap(.~region)+ theme_bw()
+    p1
+         spear_df_yearmean_anglian <- subset(spear_df_yearmean, region == 'Anglian')
+
+  #Averaged Over Sites
+     p2<- ggplot(spear_df_yearmean,aes(y=sitespear,x=sitebod)) + geom_point(shape=21,size=2,aes(fill=region)) + facet_wrap(~region, ncol = 1)+ theme_bw()
+    bod_plot <- p2 + geom_smooth() + guides() + labs(x = "Mean BOD Concentration (mg/l)", y = "Mean SPEAR Score") + theme(text = element_text(size = 12))
+    bod_plot
+    ggsave('BOD SPEAR Mean_NEW.png',bod_plot, width = 5, height = 10)
+    
+ #Anglian only
+     p3<- ggplot(spear_df_yearmean_anglian,aes(y=sitespear,x=sitebod)) + geom_point(shape=21,size=2, aes(fill = region)) + facet_wrap(~region, ncol = 1)+theme_bw()
+    bod_plotp3 <- p3 + geom_smooth() + guides() + labs(x = "Mean BOD Concentration (mg/l)", y = "Mean SPEAR Score") + theme(text = element_text(size = 20))
+    bod_plotp3
+    ggsave('Anglian BOD SPEAR Mean_NEW.png',bod_plotp3)
+      
+    
+#Number of observed sites
+  #count the number of sites per region per year
+    head(spear_df)
+    allregionsbodbysiteobs <- spear_df %>% group_by(region, Year) %>% summarise(count_site = n_distinct(site_id))
+    
+  #plot observations
+    bodspearsiteobs<- ggplot(allregionsbodbysiteobs, aes(x=Year, y=count_site, color=region)) +
+      geom_point() +
+      #geom_line(method = "lm", se=FALSE) +
+      theme_classic() +
+      ylab("Number of sample sites") +
+      xlab("Years")
+    bodspearsiteobs
+    #ggsave('BOD SPEAR site observations.png',bodspearsiteobs,width=10,height=10)
+
+
+
+```
+
+
+### Model 1: Everything Random
+
+Two models here - first a random slope model where the effect of BOD is allowed to vary by site.
+
+```{r}
+
+#### MODELS
+    bod_m1<-lmer(sitespear ~ 1 + (sitebod|region) + (1|site_id) + (1|Year),data=spear_df_clean)
+      summary(bod_m1)
+      
+      
+    ### Dotplots of Random Effects  
+      dotplot(ranef(bod_m1,condVar=T))
+      
+      dotplot(ranef(bod_m1,condVar=T,whichel="site_id"))
+
+    ### Simulations to Look At Random Slopes
+      bod_m1_sim<-sim(bod_m1)
+    
+    ### Extract Slope REs
+      bod_m1_slopes<- bod_m1_sim@ranef$region[,,2]
+      bod_m1_slopes_long<- bod_m1_slopes %>% as.data.frame() %>% pivot_longer(colnames(bod_m1_slopes),names_to = "Region",values_to = "value")
+      
+```
+
+#### Plot of Slope Random Effects
+
+```{r}
+ ##Plot of Slope Effects
+      bod_slope_plot1<-  bod_m1_slopes_long %>% ggplot(aes(y=Region,x=value)) + geom_vline(xintercept = 0, linetype = "dashed") +  stat_halfeye(shape=21,point_fill="white",point_size=5,colour="black",slab_alpha=0.5) + theme_bw()
+      bod_slope_plot2<- bod_slope_plot1 + labs(x="Marginal BOD Slope Mean",y="Region")
+      bod_slope_plot2 
+
+```
+
+### Model 2
+Here we move the BOD*Region interaction into the Fixed Effects, which allows us to perform formal model selection using AIC
+
+```{r}
+    ##Fixed Effect Interaction Model - Linear 
+      bod_m2<-lmer(sitespear ~ sitebod*region + (1|Year),data=spear_df_clean)
+      summary(bod_m2)
+```
+
+We can also fit the same model allowing for non-linear effects of BOD (seems evident in the plots for SOME regions)
+We always include linear effects as well as 'higher- order terms'
+```{r}
+    ##Fixed Effect Interaction Model - NON-LINEAR 
+      bod_m3<-lmer(sitespear ~ sitebod*region + I(sitebod^2)*region + (1|Year),data=spear_df_clean)
+      summary(bod_m3)
+```
+
+### MODEL SELECTION
+Ok so here we take the non-linear BOD model as our top model. Containing an effect of BOD-squared interaction with region (e.g. hypothesis is effect of BOD is non-linear, but the degree of non-linearity varies by region)
+
+For AIC model selection (with a Gaussian response), we need to make sure all comparisons are done on models fitted with Maximimum Likelihood (ML) and not REstricted Maximum Likelihood (REML)
+
+```{r}
+bod_m3_ML<-update(bod_m3,REML=F) 
+```
+
+
+```{r}
+## Dredge Model 
+  options(na.action="na.fail") # dredge function will break if different models contain different data / rows of data
+
+#Dependency Chain (an expression to be evaluated later)
+msubset <- expression(
+        dc(sitebod, `I(sitebod^2)`) &
+        dc(region:sitebod, `I(sitebod^2):region`))
+
+
+## Dredge Model 
+
+      bod_dredge<- dredge(bod_m3_ML,subset=msubset) 
+      bod_dredge
+    write.table(bod_dredge, file = "AICc BOD vs SPEAR.txt", sep = ",")
+```
+
+CLEAR support for the non-linear interaction model 
+
+### Model Checking
+
+```{r}
+      ##Model Checking 
+        simulationOutput_bod <- simulateResiduals(fittedModel = bod_m3)
+        plot(simulationOutput_bod)
+```
+
+
+## AMMONIA AND SPEAR 
+
+### Data
+```{r}
+
+######################
+# SECTION 2: AMMONIA AND SPEAR
+######################
+  
+    ## Function to Standardise Processing 
+      ammonia_func<-function(ammoniafile,regiontext){
+        ammonia_na<-na.omit(ammoniafile)
+        ammoniamean<-with(ammonia_na,aggregate(x = Mean_LOQ1, by = list(SITE_ID,SAMPLE_YEAR), FUN = mean))
+        ammoniameans <- na.omit(ammoniamean) 
+        ammoniameans_rename<- ammoniameans %>% rename( site_id = Group.1, Year = Group.2, meanammonia = x)
+        ammoniameans_rename$region<-regiontext
+        return(ammoniameans_rename)
+               } #function end
+      
+    #AMMONIA Datasets  
+      
+      
+    #Anglia  
+      anglianammoniaraw <- read_csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/Ammonia/Anglian ammonia edited for rivers wdiths may neww.csv")
+      anglian_ammonia <-ammonia_func(anglianammoniaraw,"Anglian")
+      head(anglian_ammonia)
+    #Midlands 
+      midlandsaammoniaraw<-read_csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/Ammonia/midlands ammonia edited for widths.csv")
+      midlands_ammonia<-ammonia_func(midlandsaammoniaraw,"Midlands")
+    #NorthEast 
+      northeastammoniaraw<-read_csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/Ammonia/northeast ammonia.csv")
+      northeast_ammonia<-ammonia_func(northeastammoniaraw,"NorthEast")
+    #NorthWest
+      northwestammoniaraw<-read_csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/Ammonia/northwest ammonia.csv")
+      northwest_ammonia<-ammonia_func(northwestammoniaraw,"NorthWest")
+    #SouthEast
+      southeastammoniaraw<-read_csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/Ammonia/southeast ammonia.csv")
+      southeast_ammonia<-ammonia_func(southeastammoniaraw,"SouthEast")
+    #SouthWest 
+      southwestammoniaraw<-read_csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/Ammonia/southwest ammonia.csv")
+      southwest_ammonia<-ammonia_func(southwestammoniaraw,"SouthWest")
+    #Thames 
+      thamesammoniaraw<-read_csv(file = "C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/Ammonia/thames ammonia.csv")
+      thames_ammonia<-ammonia_func(thamesammoniaraw,"Thames")
+      head(thames_ammonia)
+##### COMBINE AMMONIA DATAFRAME
+      ammonia_df<-rbind(anglian_ammonia,midlands_ammonia,northeast_ammonia,northwest_ammonia,southeast_ammonia,southwest_ammonia,thames_ammonia)
+      head(ammonia_df)
+      nrow(ammonia_df) #12644
+      ammonia_df %>% group_by(region) %>% summarize(n=n(),nyear=length(unique(Year)),nsite=length(unique(site_id)))
+############ MERGE WITH SPEAR DATA
+      
+      spear_ammonia_long<-left_join(spear_df,ammonia_df,by=c("site_id","Year","region"))
+        head(spear_ammonia_long)
+        mean(!is.na(spear_ammonia_long$meanammonia)) #32% of ammonia values carried over
+        
+      #OMIT NAs
+        spear_ammonia_long2<-na.omit(spear_ammonia_long)
+        nrow(spear_ammonia_long2) #4166
+        spear_ammonia_long2 %>% group_by(region) %>% summarize(n=n(),uniqueyear=length(unique(Year)))
+        head(spear_ammonia_long2)
+        
+      ## Replicate Site Level Datafrmae for Plotting
+        ammonia_df_yearmean<- spear_ammonia_long2 %>%group_by (site_id,region,Year) %>% summarise_at(vars("meanammonia","sitespear","sitebod"), mean,na.rm=T) %>% 
+          group_by (region,Year) %>% summarise_at(vars("meanammonia","sitespear","sitebod"), mean,na.rm=T)
+        head(ammonia_df_yearmean)
+        nrow(ammonia_df_yearmean) #219
+              
+      
+```
+
+
+### PLots
+
+```{r}
+### PLOTS      
+      
+    #Raw Data  
+      a1<- ggplot(spear_ammonia_long2,aes(y=sitespear,x=meanammonia)) + geom_point(shape=21,size=5,aes(fill=region)) + facet_wrap(.~region)+ theme_bw()
+      a1
+      
+     ammonia_df_yearmean_anglian <- subset(ammonia_df_yearmean, region == 'Anglian')
+    #Averaged Over Sites
+    a2<- ggplot(ammonia_df_yearmean,aes(y=sitespear,x=meanammonia)) + geom_point(shape=21,size=2,aes(fill=region)) + facet_wrap(~region, ncol = 1) +theme_bw()
+      a2_plot<- a2 + geom_smooth() + guides() + labs(x= "Mean Ammonia Concentration (mg/l)", y ="Mean SPEAR Score") + theme(text = element_text(size = 12))   
+      a2_plot
+      ggsave('Ammonia SPEAR Mean2_NEW.png',a2_plot,width=5,height=10)
+      
+      ##anglian
+     a3<- ggplot(ammonia_df_yearmean_anglian,aes(y=sitespear,x=meanammonia)) + geom_point(shape=21,size=2,aes(fill=region)) + facet_wrap(~region, ncol = 1) +theme_bw()
+      a3_plot<- a3 + geom_smooth() + guides() + labs(x= "Mean Ammonia Concentration (mg/l)", y ="Mean SPEAR Score") + theme(text = element_text(size = 20))   
+      a3_plot
+      ggsave('Anglian Ammonia SPEAR Mean2_NEW.png',a3_plot)
+      
+  #Number of observed sites
+    #count the number of sites per region per year
+      head(spear_ammonia_long2)
+      allregionsammoniabysiteobs <- spear_ammonia_long2 %>% group_by(region, Year) %>% summarise(count_site = n_distinct(site_id))
+      
+    #plot observations
+      ammoniaspearsiteobs<- ggplot(allregionsammoniabysiteobs, aes(x=Year, y=count_site, color=region)) +
+        geom_point() +
+        #geom_line(se=FALSE) +
+        theme_classic() +
+        ylab("Number of sample sites") +
+        xlab("Years")
+      ammoniaspearsiteobs
+      #ggsave('Ammonia SPEAR site observations.png',ammoniaspearsiteobs,width=10,height=10) 
+   
+```
+
+
+### Models
+
+These start with linear interactions (z_meanammonia*region). You could test the non-linear interactions too (as for BOD/SPEAR) and replicate that workflow by recycling the code to produce an AIC table - then we could discuss?
+
+Model 1: Here we move the z_meanammonia*Region interaction into the Fixed Effects, which allows us to perform formal model selection using AIC
+
+
+```{r}
+####### AMMONIA MODELS
+
+    ##Fixed Effect Interaction Model - LINEAR 
+
+    #Scale MeanAmmonia  
+      spear_ammonia_long2<- spear_ammonia_long2 %>% mutate(z_meanammonia=as.numeric(scale(meanammonia)))
+
+    #Fit Model   
+      ammonia_m1<-lmer(sitespear ~ z_meanammonia*region + (1|Year),data=spear_ammonia_long2)
+      summary(ammonia_m1)
+      
+```
+
+Model 2: EVERYTHING RANDOM
+a random slope model where the effect of BOD is allowed to vary by site. Difficult ask for a mixed model, but worth trying. We could also argue we need to fit non-linear random slopes (see model 2), but this coudld be a headache. 
+
+
+```{r}
+
+ammonia_m2<-lmer(sitespear ~ 1 + (z_meanammonia|region) + (1|site_id) + (1|Year),data=spear_ammonia_long2)
+    ### Dotplots of Random Effects  
+      dotplot(ranef(ammonia_m2,condVar=T))
+      
+      dotplot(ranef(ammonia_m2,condVar=T,whichel="site_id"))
+
+    ### Simulations to Look At Random Slopes
+      ammonia_m2_sim<-sim(ammonia_m2)
+    
+    ### Extract Slope REs
+      ammonia_m2_slopes<- ammonia_m2_sim@ranef$region[,,2]
+      ammonia_m2_slopes_long<- ammonia_m2_slopes %>% as.data.frame() %>% pivot_longer(colnames(ammonia_m2_slopes),names_to = "Region",values_to = "value")
+      
+```
+
+Model 3: We can also fit the same model allowing for non-linear effects of BOD (seems evident in the plots for SOME regions)
+We always include linear effects as well as 'higher- order terms'
+```{r}
+    ##Fixed Effect Interaction Model - NON-LINEAR 
+       
+      ammonia_m3<-lmer(sitespear ~ z_meanammonia*region + I(z_meanammonia^2)*region + (1|Year),data=spear_ammonia_long2)
+            summary(ammonia_m3)
+```
+### MODEL SELECTION
+Ok so here we take the non-linear ammonia model as our top model. Containing an effect of ammonia-squared interaction with region (e.g. hypothesis is effect of ammonia is non-linear, but the degree of non-linearity varies by region)
+
+For AIC model selection (with a Gaussian response), we need to make sure all comparisons are done on models fitted with Maximimum Likelihood (ML) and not REstricted Maximum Likelihood (REML)
+
+
+```{r}
+      ammonia_m3_ML<-update(ammonia_m3,REML=F) 
+```
+Then we can ask for all-subsets selection of this model, but critically we tell dredge it isnt allowed to fit 'higher order terms' like an interaction without fitting the main effects. Likewise it isnt allowed to fit 'ammonia-squared' without linear 'ammonia'.
+
+```{r}
+        options(na.action="na.fail") # dredge function will break if different models contain different data / rows of data
+      
+    #Dependency Chain (an expression to be evaluated later)
+      msubset <- expression(
+              dc(z_meanammonia, `I(z_meanammonia^2)`) &
+              dc(region:z_meanammonia, `I(z_meanammonia^2):region`))
+      
+      library(MuMIn)
+    ## Dredge Model 
+            ammonia_dredge<- dredge(ammonia_m3_ML,subset=msubset)
+            ammonia_dredge
+            write.table(ammonia_dredge, file = "AICc ammonia vs SPEAR.txt", sep = ",")
+          
+    
+```
+Model 3 is justified here - AIC is so much lower
+
+### Model Checking
+
+```{r}
+      ##Model Checking 
+        simulationOutput_ammonia <- simulateResiduals(fittedModel = ammonia_m3)
+        plot(simulationOutput_ammonia)
+```
+
+
+
+
+# CORRELATION TESTS 
+## Insecticide vs Ammonia
+### Data - prep ammonia
+```{r}
+### SECTION 3: Corrlation test - pesticide/insecticide use vs water quality
+#PREP AMMONIA 
+        
+            ammonia_data_prep<-function(ammoniafile){
+              #Aggregate BOD Data for sites
+              ammoniaraws <- na.omit(ammoniafile) 
+              site_ammomean <- with(ammoniaraws,aggregate(Mean_LOQ1, by = list(SITE_ID, SAMPLE_YEAR), FUN = mean))
+              site_ammomeannamed<- site_ammomean %>% rename(site_id = Group.1, Year = Group.2, meanammonia_site = x)
+              return(site_ammomeannamed)}
+            
+            ammonia_data_prep2 <-function(ammonafile2,regionlabel){
+              #Aggregate BOD Data for sites
+              ammonraws2 <- na.omit(ammonafile2) 
+              site_ammomean2 <- with(ammonraws2,aggregate(meanammonia_site, by = list(Year), FUN = mean))
+              site_ammomeannamed2<- site_ammomean2 %>% rename(Year = Group.1, meanammo_year = x)
+              site_spearammo_merge_rename2<- mutate(site_ammomeannamed2,region=regionlabel)
+              return(site_spearammo_merge_rename2)}
+            
+            #anglian
+            anglian_df_ammo<-ammonia_data_prep(anglianammoniaraw)
+            anglian_df_ammo_year<-ammonia_data_prep2(anglian_df_ammo, "Anglian")
+            
+            #SouthEast
+            southeast_df_ammo<-ammonia_data_prep(southeastammoniaraw)
+            southeast_df_ammo_year<-ammonia_data_prep2(southeast_df_ammo, "SouthEast")
+            
+            #SouthWest
+            southwest_df_ammo<-ammonia_data_prep(southwestammoniaraw)
+            southwest_df_ammo_year<-ammonia_data_prep2(southwest_df_ammo, "SouthWest")
+            
+            
+```
+
+
+### Data - prep anglian insecticide
+```{r}
+#DATASETS (new region variable for consistency)
+      angliantotalpesticide <- read.csv("C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/Pesticide use/angliantotalpesticideuse.csv")
+        angliantotalpesticide$region<-"Anglian"
+      southeasttotalpesticide <- read.csv("C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/Pesticide use/southeasttotalpesticideuse.csv")
+        southeasttotalpesticide$region<-"SouthEast"
+      southwesttotalpesticide <- read.csv("C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/Pesticide use/southwesttotalpesticideuse.csv")
+angliantotalinsecticide <- read.csv("C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/Insecticide use/anglianinsecticideuse.csv")
+southeasttotalinsecticide  <- read.csv("C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/Insecticide use/southeastinsecticideuse.csv")
+southwesttotalinsecticide <- read.csv("C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/Insecticide use/southwestinsecticideuse.csv")
+
+#First Scrub Odd Commas from Area variable 
+          head(angliantotalinsecticide)
+          angliantotalinsecticide$area_ha<-as.numeric(gsub(",","",angliantotalinsecticide$Total_area_treated_ha))
+          #Divide Pesticides by Area  
+          angliantotalinsecticide<- angliantotalinsecticide %>% mutate(insecticide_per_ha=total_weight_applied_kg/area_ha)
+          hist(angliantotalinsecticide$area_ha)
+          head(angliantotalinsecticide)
+          #select only anglian
+          ammonia_df_yearmean_anglian <- ammonia_df_yearmean %>% filter(region =="Anglian")
+          head(ammonia_df_yearmean_anglian)
+          #merge data
+          head(anglian_df_ammo_year)
+          head(angliantotalinsecticide)
+          anglianmergetotalinsectammoniaregionalyear <- angliantotalinsecticide %>% right_join(anglian_df_ammo_year, by=c("Year")) #merge pesticide and ammonia data
+```
+
+### Test anglian - ammonia vs insecticide (kg/ha)
+```{r}
+#test
+          ks.test(anglianmergetotalinsectammoniaregionalyear$meanammo_year  , anglianmergetotalinsectammoniaregionalyear$insecticide_per_ha) #non-parametric test
+          cor.test(anglianmergetotalinsectammoniaregionalyear$meanammo_year  , anglianmergetotalinsectammoniaregionalyear$insecticide_per_ha,  method="kendall") #test
+```
+
+### Data - prep southeast insecticide
+```{r}
+#Southeast
+            #First Scrub Odd Commas from Area variable 
+          southeasttotalinsecticide$area_ha<-as.numeric(gsub(",","",southeasttotalinsecticide$Total_area_treated_ha))
+            #Divide Pesticides by Area  
+          southeasttotalinsecticide<- southeasttotalinsecticide %>% mutate(insecticide_per_ha=total_weight_applied_kg/area_ha)
+          hist(southeasttotalinsecticide$area_ha)
+          head(southeasttotalinsecticide)
+          #select only Southeast
+          ammonia_df_yearmean_southeast <- ammonia_df_yearmean %>% filter(region =="SouthEast")
+          head(ammonia_df_yearmean_southeast)
+            #merge data
+          southeasttotalinsecticideammoniaregionalyear <- southeasttotalinsecticide %>% right_join(southeast_df_ammo_year, by=c("Year")) #merge pesticide and ammonia data
+```
+
+### Test southeast - ammonia vs insecticide (kg/ha)
+
+```{r}
+#test
+          ks.test(southeasttotalinsecticideammoniaregionalyear$meanammo_year, southeasttotalinsecticideammoniaregionalyear$insecticide_per_ha) #non-parametric test
+          cor.test(southeasttotalinsecticideammoniaregionalyear$meanammo_year, southeasttotalinsecticideammoniaregionalyear$insecticide_per_ha,  method="kendall") #test
+```
+
+### Data - prep southwest insecticide
+
+```{r}
+#Southwest
+          #First Scrub Odd Commas from Area variable 
+          southwesttotalinsecticide$area_ha<-as.numeric(gsub(",","",southwesttotalinsecticide$Total_area_treated_ha))
+          #Divide Pesticides by Area  
+          southwesttotalinsecticide<- southwesttotalinsecticide %>% mutate(insecticide_per_ha=total_weight_applied_kg/area_ha)
+          hist(southwesttotalinsecticide$area_ha)
+          head(southwesttotalinsecticide)
+          #select only southwest
+          ammonia_df_yearmean_southwest <- ammonia_df_yearmean %>% filter(region =="SouthWest")
+          head(ammonia_df_yearmean_southwest)
+          #merge data
+          southwesttotalinsecticideammoniaregionalyear <- southwesttotalinsecticide %>% right_join(southwest_df_ammo_year, by=c("Year")) #merge pesticide and ammonia data
+```
+
+### Test southwest - ammonia vs insecticide (kg/ha)
+
+```{r}
+#test
+          ks.test(southwesttotalinsecticideammoniaregionalyear$meanammo_year, southwesttotalinsecticideammoniaregionalyear$insecticide_per_ha) #non-parametric test
+          cor.test(southwesttotalinsecticideammoniaregionalyear$meanammo_year, southwesttotalinsecticideammoniaregionalyear$insecticide_per_ha,  method="kendall") #test
+```
+
+##Pesticide use and ammonia
+
+### Data - prep anglian pesticide
+
+```{r}
+######Pesticide use and ammonia
+      
+          #Anglian
+          #First Scrub Odd Commas from Area variable 
+          head(angliantotalpesticide)
+          angliantotalpesticide$area_ha<-as.numeric(gsub(",","",angliantotalpesticide$Total_area_treated_ha))
+          #Divide Pesticides by Area  
+          angliantotalpesticide<- angliantotalpesticide %>% mutate(pesticide_per_ha=total_weight_applied_kg/area_ha)
+          hist(angliantotalpesticide$area_ha)
+          head(angliantotalpesticide)
+          #merge data
+          anglianmergetotalpesticideammoniaregionalyear <- angliantotalpesticide %>% right_join(anglian_df_ammo_year, by=c("Year")) #merge pesticide and ammonia data 
+         head(anglianmergetotalpesticideammoniaregionalyear)
+```
+
+### Test anglian - ammonia vs pesticide (kg/ha)
+
+```{r}
+#test
+          ks.test(anglianmergetotalpesticideammoniaregionalyear$meanammo_year, anglianmergetotalpesticideammoniaregionalyear$pesticide_per_ha) #non-parametric test
+          cor.test(anglianmergetotalpesticideammoniaregionalyear$meanammo_year, anglianmergetotalpesticideammoniaregionalyear$pesticide_per_ha,  method="kendall") #test
+```
+
+### Data - prep southest pesticide
+
+```{r}
+#Southeast
+          head(southeasttotalpesticide)
+          southeasttotalpesticide$area_ha<-as.numeric(gsub(",","",southeasttotalpesticide$Total_area_treated_ha))
+          #Divide Pesticides by Area  
+          southeasttotalpesticide<- southeasttotalpesticide %>% mutate(pesticide_per_ha=total_weight_applied_kg/area_ha)
+          hist(southeasttotalpesticide$area_ha)
+          head(southeasttotalpesticide)
+          
+          #merge data
+          southeasttotalpesticideammoniaregionalyear <- southeasttotalpesticide %>% right_join(southeast_df_ammo_year, by=c("Year")) #merge pesticide and ammonia data
+```
+
+### Test southest - ammonia vs pesticide (kg/ha)
+
+```{r}
+#test
+          ks.test(southeasttotalpesticideammoniaregionalyear$meanammo_year, southeasttotalpesticideammoniaregionalyear$pesticide_per_ha) #non-parametric test
+          cor.test(southeasttotalpesticideammoniaregionalyear$meanammo_year, southeasttotalpesticideammoniaregionalyear$pesticide_per_ha,  method="kendall") #test
+```
+
+### Test southwest - ammonia vs pesticide (kg/ha)
+
+
+```{r}
+### Data - prep southwest pesticide
+
+
+```{r}
+#southwest
+          southwesttotalpesticide$area_ha<-as.numeric(gsub(",","",southwesttotalpesticide$Total_area_treated_ha))
+          #Divide Pesticides by Area  
+          southwesttotalpesticide<- southwesttotalpesticide %>% mutate(pesticide_per_ha=total_weight_applied_kg/area_ha)
+          hist(southwesttotalpesticide$area_ha)
+          head(southwesttotalpesticide)
+          #merge data
+          southwesttotalpesticideammoniaregionalyear <- southwesttotalpesticide %>% right_join(southwest_df_ammo_year, by=c("Year")) #merge pesticide and ammonia data
+```
+          
+          
+```{r}
+#test
+          ks.test(southwesttotalpesticideammoniaregionalyear$meanammo_year, southwesttotalpesticideammoniaregionalyear$pesticide_per_ha) #non-parametric test
+          cor.test(southwesttotalpesticideammoniaregionalyear$meanammo_year, southwesttotalpesticideammoniaregionalyear$pesticide_per_ha,  method="kendall") #test
+```
+
+
+```
+
+
+
+```{r}
+#plot
+
+  ##plot insecticide vs ammonia
+  
+  allinsect_amm <- rbind(anglianmergetotalinsectammoniaregionalyear, southeasttotalinsecticideammoniaregionalyear, southwesttotalinsecticideammoniaregionalyear)
+  allinsect_amm1 <- allinsect_amm %>% drop_na(Region)
+
+  insect_amm <- ggplot(allinsect_amm1, aes(x= insecticide_per_ha, y = meanammo_year, color = Region)) + geom_point(size 3) + geom_smooth(method = lm) + theme_bw() + facet_wrap(~Region, ncol= 1) + ylab("Mean Ammonia (mg/l)") +
+  xlab("Total Insecticide Weight per Hectare (kg)") + theme(axis.text.x = element_text(size = 20), axis.text.y = element_text(size= 20), strip.text=element_text(size=20), axis.title = element_text(size = 25)) 
+insect_amm
+ggsave('insectamm_new.png', insect_amm, width=8, height =10) 
+
+  ##plot pesticide vs ammonia
+  
+  anglianmergetotalpesticideammoniaregionalyear <- anglianmergetotalpesticideammoniaregionalyear %>% select(-7)
+    names(anglianmergetotalpesticideammoniaregionalyear)[9] <- "region"
+
+  southeasttotalpesticideammoniaregionalyear <- southeasttotalpesticideammoniaregionalyear %>% select(-7)
+  names(southeasttotalpesticideammoniaregionalyear)[10] <- "region"
+  southeasttotalpesticideammoniaregionalyear <- southeasttotalpesticideammoniaregionalyear %>% select(-7)
+  southwesttotalpesticideammoniaregionalyear <- southwesttotalpesticideammoniaregionalyear %>% select(-7)
+
+allpest_amm <- rbind(anglianmergetotalpesticideammoniaregionalyear, southeasttotalpesticideammoniaregionalyear, southwesttotalpesticideammoniaregionalyear)
+
+  allpest_amm1 <- allpest_amm %>% drop_na(Region)
+
+  pest_amm <- ggplot(allpest_amm1, aes(x= pesticide_per_ha, y = meanammo_year, color = Region)) + geom_point(size =3) + geom_smooth(method = lm) + theme_bw() + facet_wrap(~Region, ncol= 1) + ylab("Mean Ammonia (mg/l)") +
+  xlab("Total Pesticide Weight per Hectare (kg)") + theme(axis.text.x = element_text( size = 20), axis.text.y = element_text(size= 20), strip.text=element_text(size=20), axis.title = element_text(size = 25)) 
+pest_amm
+
+ggsave('pestamm_new.png', pest_amm, width=8, height =10) 
+
+
+```
+
+## Insecticide vs BOD
+### Data - prep BOD
+```{r}
+#PREP BOD 
+          BOD_data_prep<-function(BODfile){
+            #Aggregate BOD Data for sites
+            BODraws <- na.omit(BODfile) 
+            site_BODmean <- with(BODraws,aggregate(Mean_LOQ1, by = list(SITE_ID, SAMPLE_YEAR), FUN = mean))
+            site_BODmeannamed<- site_BODmean %>% rename(site_id = Group.1, Year = Group.2, meanBOD_site = x)
+            return(site_BODmeannamed)}
+        
+        BOD_data_prep2 <-function(BODfile2,regionlabel){
+          #Aggregate BOD Data for sites
+          BODraws2 <- na.omit(BODfile2) 
+          site_BODmean2 <- with(BODraws2,aggregate(meanBOD_site, by = list(Year), FUN = mean))
+          site_BODmeannamed2<- site_BODmean2 %>% rename(Year = Group.1, meanBOD_year = x)
+          site_spearbod_merge_rename2<- mutate(site_BODmeannamed2,region=regionlabel)
+          return(site_spearbod_merge_rename2)}
+        
+          #anglian
+            anglian_df_BOD<-BOD_data_prep(anglianBODraw)
+            anglian_df_BOD_year<-BOD_data_prep2(anglian_df_BOD, "Anglian")
+            
+          #SouthEast
+            southeast_df_BOD<-BOD_data_prep(southeastBODraw)
+            southeast_df_BOD_year<-BOD_data_prep2(southeast_df_BOD, "SouthEast")
+            
+          #SouthWest
+            southwest_df_BOD<-BOD_data_prep(southwestBODraw)
+            southwest_df_BOD_year<-BOD_data_prep2(southwest_df_BOD, "SouthWest")
+```
+
+### Test anglian - insecticide vs BOD
+```{r}
+#anglian
+              spear_df_yearmean_anglian <- spear_df_yearmean %>% filter(region =="Anglian")
+            head(anglian_df_BOD_year)
+            #merge data
+            anglianmergetotalinsectBODregionalyear <- angliantotalinsecticide %>% right_join(anglian_df_BOD_year, by=c("Year")) #merge pesticide and ammonia data 
+            #test
+            ks.test(anglianmergetotalinsectBODregionalyear$meanBOD_year  , anglianmergetotalinsectBODregionalyear$insecticide_per_ha) #non-parametric test
+            cor.test(anglianmergetotalinsectBODregionalyear$meanBOD_year  , anglianmergetotalinsectBODregionalyear$insecticide_per_ha,  method="kendall") #test
+```
+
+### Test southeast - insecticide vs BOD
+
+```{r}
+#Southeast
+            spear_df_yearmean_southeast <- spear_df_yearmean %>% filter(region =="SouthEast")
+            head(spear_df_yearmean_southeast)
+            #merge data
+            southeastmergetotalinsectBODregionalyear <- southeasttotalinsecticide %>% right_join(southeast_df_BOD_year, by=c("Year")) #merge pesticide and ammonia data 
+            #test
+            ks.test(southeastmergetotalinsectBODregionalyear$meanBOD_year  , southeastmergetotalinsectBODregionalyear$insecticide_per_ha) #non-parametric test
+            cor.test(southeastmergetotalinsectBODregionalyear$meanBOD_year  , southeastmergetotalinsectBODregionalyear$insecticide_per_ha,  method="kendall") #test
+```
+
+### Test southwest - insecticide vs BOD
+
+```{r}
+#Southwest
+            spear_df_yearmean_southwest <- spear_df_yearmean %>% filter(region =="SouthWest")
+            head(spear_df_yearmean_southwest)
+            #merge data
+            southwestmergetotalinsectBODregionalyear <- southwesttotalinsecticide %>% right_join(southwest_df_BOD_year, by=c("Year")) #merge pesticide and ammonia data 
+            #test
+            ks.test(southwestmergetotalinsectBODregionalyear$meanBOD_year  , southwestmergetotalinsectBODregionalyear$insecticide_per_ha) #non-parametric test
+            cor.test(southwestmergetotalinsectBODregionalyear$meanBOD_year  , southwestmergetotalinsectBODregionalyear$insecticide_per_ha,  method="kendall") #test
+```
+
+## Pesticide vs BOD
+### Test anglian - pesticide vs BOD
+
+```{r}
+#Anglian
+            
+            #merge data
+            anglianmergetotalpestBODregionalyear <- angliantotalpesticide %>% right_join(anglian_df_BOD_year, by=c("Year")) #merge pesticide and ammonia data 
+            #test
+            ks.test(anglianmergetotalpestBODregionalyear$meanBOD_year, anglianmergetotalpestBODregionalyear$pesticide_per_ha) #non-parametric test
+            cor.test(anglianmergetotalpestBODregionalyear$meanBOD_year, anglianmergetotalpestBODregionalyear$pesticide_per_ha,  method="kendall")
+```
+
+### Test southeast - pesticide vs BOD
+
+```{r}
+#southeast
+            
+            #merge data
+            southeastmergetotalpestBODregionalyear <- southeasttotalpesticide %>% right_join(southeast_df_BOD_year, by=c("Year")) #merge pesticide and ammonia data 
+            #test
+            ks.test(southeastmergetotalpestBODregionalyear$meanBOD_year, southeastmergetotalpestBODregionalyear$pesticide_per_ha) #non-parametric
+            cor.test(southeastmergetotalpestBODregionalyear$meanBOD_year, southeastmergetotalpestBODregionalyear$pesticide_per_ha,  method="kendall")
+```
+
+### Test southwest - pesticide vs BOD
+
+```{r}
+#southwest
+            
+            #merge data
+            southwestmergetotalpestBODregionalyear <- southwesttotalpesticide %>% right_join(southwest_df_BOD_year, by=c("Year")) #merge pesticide and ammonia data 
+            #test
+            ks.test(southwestmergetotalpestBODregionalyear$meanBOD_year, southwestmergetotalpestBODregionalyear$pesticide_per_ha) #non-parametric test
+            cor.test(southwestmergetotalpestBODregionalyear$meanBOD_year, southwestmergetotalpestBODregionalyear$pesticide_per_ha,  method="kendall") #test
+```
+
+```{r}
+#plot
+
+  ##plot insecticide vs BOD
+  
+  allinsect_bod <- rbind(anglianmergetotalinsectBODregionalyear, southeastmergetotalinsectBODregionalyear, southwestmergetotalinsectBODregionalyear)
+  allinsect_bod1 <- allinsect_bod %>% drop_na(Region)
+
+  insect_bod <- ggplot(allinsect_bod1, aes(x= insecticide_per_ha, y = meanBOD_year    , color = Region)) + geom_point(size = 3) + geom_smooth(method = lm) + theme_bw() + facet_wrap(~Region, ncol= 1) + ylab("Mean BOD (mg/l)") +
+  xlab("Total Insecticide Weight per Hectare (kg)") + theme(axis.text.x = element_text (vjust = 0.2, size = 20), axis.text.y = element_text(size= 20), strip.text=element_text(size=20), axis.title = element_text(size = 25)) 
+insect_bod
+ggsave('insectbod_new.png', insect_bod, width=8, height =10) 
+
+anglianmergetotalpestBODregionalyear1 <- anglianmergetotalpestBODregionalyear %>% select(-7)
+names(anglianmergetotalpestBODregionalyear1)[10] <- "region"
+
+southeastmergetotalpestBODregionalyear1 <- southeastmergetotalpestBODregionalyear %>% select(-7)
+names(southeastmergetotalpestBODregionalyear1)[10] <- "region"
+  ##plot pesticide vs BOD
+  
+allpest_bod <- rbind(anglianmergetotalpestBODregionalyear1, southeastmergetotalpestBODregionalyear1, southwestmergetotalpestBODregionalyear)
+
+  allpest_bod1 <- allpest_bod %>% drop_na(Region)
+
+  pest_bod <- ggplot(allpest_bod1, aes(x= pesticide_per_ha, y = meanBOD_year, color = Region)) + geom_point(size = 3) + geom_smooth(method = lm) + theme_bw() + facet_wrap(~Region, ncol= 1) + ylab("Mean BOD (mg/l)") +
+  xlab("Total Pesticide Weight per Hectare (kg)") + theme(axis.text.x = element_text(vjust = 0.2, size = 20), axis.text.y = element_text(size= 20), strip.text=element_text(size=20), axis.title = element_text(size = 25)) 
+pest_bod
+
+ggsave('pestbod_new.png', pest_bod, width=8, height =10) 
+
+
+
+```
+
+
+## Pesticide vs SPEAR 
+### Data
+```{r}
+## SECTION 4: Pesticide use vs SPEAR
+## Sorting data
+
+  #DATASETS (new region variable for consistency)
+      angliantotalpesticide <- read.csv("C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/Pesticide use/angliantotalpesticideuse.csv")
+        angliantotalpesticide$region<-"Anglian"
+      southeasttotalpesticide <- read.csv("C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/Pesticide use/southeasttotalpesticideuse.csv")
+        southeasttotalpesticide$region<-"SouthEast"
+      southwesttotalpesticide <- read.csv("C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/Pesticide use/southwesttotalpesticideuse.csv")
+        southwesttotalpesticide$region<-"SouthWest"
+      
+     #MERGE
+      pesticide_df<-rbind(angliantotalpesticide,southeasttotalpesticide,southwesttotalpesticide)
+        head(pesticide_df)
+        head(spear_df_yearmean)
+      ## COPY ACROSS SPEAR_PER_REGION_YEAR (first rename lowercase region)
+        pesticide_spear_df<-pesticide_df %>% left_join(.,spear_df_yearmean,by=c("region","Year"))
+          head(pesticide_spear_df)
+          mean(!is.na(pesticide_spear_df$sitespear)) #all filled
+          
+      ##checking data pesticides area vs weight - very messy (no correlation so consider kg/ha)
+          
+          anglianpest_weightarea<- ggplot(angliantotalpesticide, aes(x= total_weight_applied_kg , y = Total_area_treated_ha))  + geom_smooth(method="lm") + geom_point(shape=21,size=5,aes(fill=region))          
+          anglianpest_weightarea + labs(x="total_weight_applied_kg",y="Total_area_treated_ha")
+          anglianpest_weightarea
+          
+          southeastpest_weightarea<- ggplot(southeasttotalpesticide, aes(x= total_weight_applied_kg , y = Total_area_treated_ha))  + geom_smooth(method="lm") + geom_point(shape=21,size=5,aes(fill=region))          
+          southeastpest_weightarea + labs(x="total_weight_applied_kg",y="Total_area_treated_ha")
+          southeastpest_weightarea
+          
+          southwestpest_weightarea<- ggplot(southwesttotalpesticide, aes(x= total_weight_applied_kg , y = Total_area_treated_ha))  + geom_smooth(method="lm") + geom_point(shape=21,size=5,aes(fill=region))          
+          southwestpest_weightarea + labs(x="total_weight_applied_kg",y="Total_area_treated_ha")
+          southwestpest_weightarea
+          
+      
+          
+    
+######### PLOTS
+    
+       pestspear_p1<-ggplot(pesticide_spear_df,aes(x=total_weight_applied_kg,y=sitespear)) + geom_smooth(method="lm") + geom_point(shape=21,size=5,aes(fill=region))          
+       pestspear_p1 + facet_grid(region~.) + guides(fill="none") + labs(x="Total Pesticide Weight (kg)",y="Mean SPEARpesticide")
+       pestspear_p1
+```
+
+### Model (SPEAR vs Pesticide)
+```{r}
+######### MODELS 
+library(ggplot2)
+    #Scale Pesticide Use 
+      pesticide_spear_df<- pesticide_spear_df %>% mutate(z_pesticide_weight=as.numeric(scale(total_weight_applied_kg)))
+head(pesticide_spear_df)
+  ##### #Model  1     
+      pesticide_m1<-lmer(sitespear ~ z_pesticide_weight*region + (1|Year),data=pesticide_spear_df)  
+        summary(pesticide_m1)
+        
+      #Random Effects   
+        dotplot(ranef(pesticide_m1,condVar=T)) # not a lot of year variation
+```
+
+
+```{r}
+###### Model 2  - Pesticide Weight Per Area
+        
+      # First Scrub Odd Commas from Area variable 
+        pesticide_spear_df$area_ha<-as.numeric(gsub(",","",pesticide_spear_df$Total_area_treated_ha))
+      # Divide Pesticides by Area  
+        pesticide_spear_df<- pesticide_spear_df %>% mutate(pesticide_per_ha=total_weight_applied_kg/area_ha)
+        hist(pesticide_spear_df$area_ha)
+      # Scale
+        pesticide_spear_df<- pesticide_spear_df %>% mutate(z_pesticide_per_ha=as.numeric(scale(pesticide_per_ha)))
+        head(pesticide_spear_df)
+        
+      # Model - Pesticide Weight Per Area
+        pesticide_m2<-lmer(sitespear ~ z_pesticide_per_ha*region + (1|Year),data=pesticide_spear_df) 
+          summary(pesticide_m2)
+```
+
+
+### Model selection
+
+```{r}
+
+pesticide_m2_ML<-update(pesticide_m2,REML=F) 
+
+ options(na.action="na.fail") # dredge function will break if different models contain different data / rows of data
+      
+    #Dependency Chain (an expression to be evaluated later)
+      msubset <- expression(
+              dc(z_pesticide_per_ha ) &
+              dc(region:z_pesticide_per_ha))
+    
+    ## Dredge Model 
+            pesticide_dredge<- dredge(pesticide_m2_ML,subset=msubset)
+            pesticide_dredge
+            
+            write.table(pesticide_dredge, file = "AICc Pesticide vs SPEAR.txt", sep = ",")
+
+            
+```
+
+Model checking
+```{r}
+  ##Model Checking 
+        simulationOutput_pesticide <- simulateResiduals(fittedModel = pesticide_m2)
+        plot(simulationOutput_pesticide)
+```
+ 
+
+###Plot (annual kg/ha pesticide data vs average regional SPEAR)
+```{r}
+##### PLOT
+      pestspear_perha_p1<-ggplot(pesticide_spear_df,aes(x=pesticide_per_ha,y=sitespear, color = region)) + geom_smooth(method="lm") + geom_point(shape=21,size=3,aes(fill=region)) + theme_bw()      
+      pestspear_perha_p2<- pestspear_perha_p1 + facet_wrap(~region, ncol=1) + guides(fill="none") + labs(x="Total Pesticide Weight per Hectare (kg)",y="Mean SPEARpesticide") +  theme(axis.text.x = element_text(vjust = 0.2, size = 20), axis.text.y = element_text(size= 20), strip.text=element_text(size=20), axis.title = element_text(size = 25))
+      pestspear_perha_p2
+        ggsave('Pesticide SPEAR.png',pestspear_perha_p2,width=8,height=16)
+          
+```
+
+
+## INSECTICIDE vs SPEAR
+
+### Data
+```{r}
+## SECTION 5: Insecticide use vs SPEAR
+### Load data (new region variable for consistency)
+        angliantotalinsecticide <- read.csv("C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/Insecticide use/anglianinsecticideuse.csv")
+        angliantotalinsecticide$region<-"Anglian"
+        southeasttotalinsecticide <- read.csv("C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/Insecticide use/southeastinsecticideuse.csv")
+        southeasttotalinsecticide$region<-"SouthEast"
+        southwesttotalinsecticide <- read.csv("C:/Users/imoge/OneDrive/phd/Research/Objective 3/Fig 2 - 7/Insecticide use/southwestinsecticideuse.csv")
+        southwesttotalinsecticide$region<-"SouthWest"
+        
+        #MERGE
+        insecticide_df<-rbind(angliantotalinsecticide,southeasttotalinsecticide,southwesttotalinsecticide)
+        head(insecticide_df)
+        
+        ## COPY ACROSS SPEAR_PER_REGION_YEAR (first rename lowercase region)
+        insecticide_spear_df<-insecticide_df %>% left_join(.,spear_df_yearmean,by=c("region","Year"))
+        head(insecticide_spear_df)
+        mean(!is.na(insecticide_spear_df$sitespear)) #all filled
+        
+        ##checking data pesticides area vs weight
+        
+        head(angliantotalinsecticide)
+        head(angliantotalpesticide)
+        anglianinsect_weightarea<- ggplot(angliantotalinsecticide, aes(x= total_weight_applied_kg , y = Total_area_treated_ha))  + geom_smooth(method="lm") + geom_point(shape=21,size=5,aes(fill=region))         
+        anglianinsect_weightarea + labs(x="total_weight_applied_kg",y="Total_area_treated_ha")
+        anglianinsect_weightarea
+        
+        southeastinsect_weightarea<- ggplot(southeasttotalinsecticide, aes(x= total_weight_applied_kg , y = Total_area_treated_ha))  + geom_smooth(method="lm") + geom_point(shape=21,size=5,aes(fill=region))          
+        southeastinsect_weightarea + labs(x="total_weight_applied_kg",y="Total_area_treated_ha")
+        southeastinsect_weightarea
+        
+        southwestinsect_weightarea<- ggplot(southwesttotalinsecticide, aes(x= total_weight_applied_kg , y = Total_area_treated_ha))  + geom_smooth(method="lm") + geom_point(shape=21,size=5,aes(fill=region))          
+        southwestinsect_weightarea + labs(x="total_weight_applied_kg",y="Total_area_treated_ha")
+        southwestinsect_weightarea
+        
+        #OMIT NAs
+        insecticide_spear_df<-na.omit(insecticide_spear_df)
+        
+        ######### PLOTS
+        head(insecticide_spear_df)
+        
+        Insectspear_p1<-ggplot(insecticide_spear_df,aes(x=total_weight_applied_kg, y=sitespear)) + geom_smooth(method="lm") + geom_point(shape=21,size=5,aes(fill=region)) + facet_grid(region~. ) + guides(fill="none") + labs(x="Total Insecticide Weight (kg)",y="Mean SPEARpesticide") + theme(axis.text.x = element_text(angle = 90, vjust = 0.2, size = 12)) 
+        Insectspear_p1
+```
+
+### Models
+```{r}
+######### MODELS 
+        
+       #Scale Insecticide Use 
+        insecticide_spear_df<- insecticide_spear_df %>% mutate(z_insecticide_weight=as.numeric(scale(total_weight_applied_kg)))
+        
+      ##### #Model  1     
+        insecticide_m1<-lmer(sitespear ~ z_insecticide_weight*region + (1|Year),data=insecticide_spear_df)  
+        summary(insecticide_m1)
+        
+      #Random Effects   
+        dotplot(ranef(insecticide_m1,condVar=T)) # not a lot of year variation
+```
+
+
+```{r}
+###### Model 2  - Insecticide Weight Per Area
+        
+      #First Scrub Odd Commas from Area variable 
+        insecticide_spear_df$area_ha<-as.numeric(gsub(",","",insecticide_spear_df$Total_area_treated_ha))
+      #Divide Pesticides by Area  
+        insecticide_spear_df<- insecticide_spear_df %>% mutate(insecticide_per_ha=total_weight_applied_kg/area_ha)
+        hist(insecticide_spear_df$area_ha)
+      #Scale
+        insecticide_spear_df<- insecticide_spear_df %>% mutate(z_insecticide_per_ha=as.numeric(scale(insecticide_per_ha)))
+        head(insecticide_spear_df)
+        
+      #Model 
+        insecticide_m2<-lmer(sitespear ~ z_insecticide_per_ha*region + (1|Year),data=insecticide_spear_df) 
+        summary(insecticide_m2)
+```
+
+### Model selection
+```{r}
+AIC(insecticide_m1, insecticide_m2)
+library(MuMIn)
+
+insecticide_m2_ML<-update(insecticide_m2,REML=F) 
+
+ options(na.action="na.fail") # dredge function will break if different models contain different data / rows of data
+      
+    #Dependency Chain (an expression to be evaluated later)
+      msubset <- expression(
+              dc(z_insecticide_per_ha ) &
+              dc(region:z_insecticide_per_ha))
+    
+    ## Dredge Model 
+            insecticide_dredge<- dredge(insecticide_m2_ML,subset=msubset)
+            insecticide_dredge
+            
+           # (confset.d4 <- get.models(insecticide_dredge, subset = delta < 5, method = "REML"))
+            get.models(insecticide_dredge, subset = 1)[[1]]
+            
+      insecticide_m3<-lmer(sitespear ~ region + z_insecticide_per_ha + (1 | Year), data=insecticide_spear_df) 
+       summary(insecticide_m3)
+     
+```
+
+Model checking
+
+```{r}
+  ##Model Checking 
+        simulationOutput_insecticide <- simulateResiduals(fittedModel = insecticide_m3)
+        plot(simulationOutput_insecticide)
+
+```
+
+### Plot
+```{r}
+##### PLOT
+        insectspear_perha_p1<-ggplot(insecticide_spear_df,aes(x=insecticide_per_ha,y=sitespear, color = region)) + geom_smooth(method="lm") + geom_point(shape=21,size=3,aes(fill=region)) + theme_bw()          
+        insectspear_perha_p2<- insectspear_perha_p1 + facet_wrap(~region, ncol= 1) + guides(fill="none") + labs(x="Total Insecticide Weight per Hectare (kg)",y="Mean SPEARpesticide") +  theme(axis.text.x = element_text(vjust = 0.2, size = 20), axis.text.y = element_text(size= 20), strip.text=element_text(size=20), axis.title = element_text(size = 25)) 
+        
+        insectspear_perha_p2
+        ggsave('Insecticide SPEAR.png',insectspear_perha_p2, width=8,height=16)
+```
